@@ -1,0 +1,69 @@
+name: HAXM build on Windows, Mac OS and Linux
+
+on: [push, pull_request]
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: .
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  my_first_job: 
+    name: Windows build
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1
+      
+    - name: Install related pkg
+      run: |
+        choco install -y nuget.commandline
+        choco install -y windowsdriverkit10
+        choco install -y windows-sdk-8.1
+        #windows-sdk-10.1 could not be installed so leverage 8.1 instead here.
+        
+    - name: Build
+     # working-directory: ${{env.GITHUB_WORKSPACE}}
+      # Add additional options to the MSBuild command line here (like platform or verbosity level).
+      # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+      run: |
+        cd platforms/windows
+        nuget restore
+        msbuild haxm.sln /p:Configuration="Debug" /p:Platform="Win32"
+        msbuild haxm.sln /p:Configuration="Debug" /p:Platform="x64"
+        ./build/tests/x64/Debug/haxm-tests.exe
+        
+  my_second_job:
+    name: Mac build
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Mac darwin build
+      run: |
+        brew install nasm
+        ls
+        cd platforms/darwin
+        xcodebuild -configuration Debug -sdk macosx ARCHS=x86_64 
+        
+  my_third_job:
+     name: Linux build
+     runs-on: ubuntu-latest
+     steps:
+     - uses: actions/checkout@v2
+     
+     - name: Linux build on Ubuntu
+       shell: bash
+       run: |
+          wget -P /tmp/downloads http://mirrors.kernel.org/ubuntu/pool/universe/n/nasm/nasm_2.13.02-0.1_amd64.deb
+          sudo apt-get install -y dpkg
+          sudo dpkg -i /tmp/downloads/nasm_2.13.02-0.1_amd64.deb
+          cd platforms/linux
+          make
+© 2021 GitHub, Inc.
