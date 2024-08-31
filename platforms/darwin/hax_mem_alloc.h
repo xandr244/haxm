@@ -28,24 +28,24 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HAX_DARWIN_COM_INTEL_HAX_H_
-#define HAX_DARWIN_COM_INTEL_HAX_H_
+#ifndef HAX_DARWIN_HAX_MEM_ALLOC_H_
+#define HAX_DARWIN_HAX_MEM_ALLOC_H_
 
-#include <mach/mach_types.h>
 #include <IOKit/IOLib.h>
-#include <sys/conf.h>
-#include <miscfs/devfs/devfs.h>
-#include <sys/ioccom.h>
-#include <sys/errno.h>
-#include <sys/kauth.h>
 #include <libkern/OSBase.h>
+#include <mach/mach_types.h>
+#include <miscfs/devfs/devfs.h>
+#include <sys/conf.h>
+#include <sys/errno.h>
+#include <sys/ioccom.h>
+#include <sys/kauth.h>
 
-#include "../../include/hax.h"
-#include "../../core/include/hax_core_interface.h"
+#include "hax.h"
+#include "interface.h"
 
-#include "com_intel_hax_component.h"
-#include "com_intel_hax_ui.h"
-#include "com_intel_hax_mem.h"
+#include "components.h"
+#include "hax_entry.h"
+#include "hax_mm.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,4 +58,4 @@ void hax_malloc_exit(void);
 #ifdef __cplusplus
 }
 #endif
-#endif  // HAX_DARWIN_COM_INTEL_HAX_H_
+#endif  // HAX_DARWIN_HAX_MEM_ALLOC_H_

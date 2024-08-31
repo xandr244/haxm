@@ -28,10 +28,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HAX_CORE_HAX_CORE_INTERFACE_H_
-#define HAX_CORE_HAX_CORE_INTERFACE_H_
+#ifndef HAX_CORE_INTERFACE_H_
+#define HAX_CORE_INTERFACE_H_
 
-#include "../../include/hax.h"
+#include "hax.h"
+
 struct vcpu_t;
 struct vm_t;
 
@@ -46,6 +47,7 @@ int vcpu_get_fpu(struct vcpu_t *vcpu, struct fx_layout *fl);
 int vcpu_set_regs(struct vcpu_t *vcpu, struct vcpu_state_t *vs);
 int vcpu_get_regs(struct vcpu_t *vcpu, struct vcpu_state_t *vs);
 int vcpu_set_cpuid(struct vcpu_t *vcpu, hax_cpuid *cpuid_info);
+int vcpu_get_cpuid(struct vcpu_t *vcpu, hax_cpuid *cpuid_info);
 void vcpu_debug(struct vcpu_t *vcpu, struct hax_debug_t *debug);
 
 void * get_vcpu_host(struct vcpu_t *vcpu);
@@ -97,4 +99,4 @@ int vcpu_event_pending(struct vcpu_t *vcpu);
 }
 #endif
 
-#endif  // HAX_CORE_HAX_CORE_INTERFACE_H_
+#endif  // HAX_CORE_INTERFACE_H_

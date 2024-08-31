@@ -48,7 +48,7 @@ SectionEnd
 Function un.onInit
   MessageBox MB_YESNO|MB_ICONEXCLAMATION "${DLG_UNINSTALL}" /SD IDYES IDYES \
       Uninstall
-  ${Exit} 2 0
+  ${Exit} ${EXIT_MODE_ABORT} 0
 Uninstall:
 FunctionEnd
 
@@ -57,7 +57,16 @@ Section Uninstall
 
   ${OpenLog}
   ${Log} "Version: ${PRODUCT_VERSION}"
+Check:
   Call un.CheckEnv
+  Pop $0
+
+  ${If} $0 == ${ENV_STATUS_INUSE}
+    MessageBox MB_RETRYCANCEL|MB_ICONSTOP "${DLG_GUEST_ERROR}" /SD IDCANCEL \
+        IDRETRY Check
+    ${Log} "${DLG_GUEST_ERROR}"
+    ${Exit} ${EXIT_MODE_QUIT} ${EXIT_FLAG_ERROR}
+  ${EndIf}
 
   ; Sometimes checktool.exe is still locked when removing $INSTDIR. Below two
   ; parts ensure that checktool.exe is completely unlocked for removal.
@@ -75,7 +84,7 @@ Section Uninstall
 
   ${If} $1 == 1
     ${Log} "Error: Installed program files are being locked."
-    ${Exit} 0 3
+    ${Exit} ${EXIT_MODE_NORMAL} ${EXIT_FLAG_ERROR}
   ${EndIf}
 
 Remove:
@@ -90,5 +99,5 @@ Remove:
   ${Log} "Delete folder: $INSTDIR"
 
   SetAutoClose true
-  ${Exit} 0 0
+  ${Exit} ${EXIT_MODE_NORMAL} 0
 SectionEnd

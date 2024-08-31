@@ -30,14 +30,13 @@
 
 #include <linux/cred.h>
 #include <linux/dm-ioctl.h>
+#include <linux/fs.h>
 #include <linux/miscdevice.h>
 #include <linux/namei.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 
-#include <linux/fs.h>
-
-#include "../../core/include/hax_core_interface.h"
+#include "interface.h"
 
 #define HAX_VM_DEVFS_FMT    "hax_vm/vm%02d"
 #define HAX_VCPU_DEVFS_FMT  "hax_vm%02d/vcpu%02d"
@@ -67,13 +66,17 @@
         }                                                                     \
         if (copy_from_user((dest), from, size)) {                             \
             hax_log(HAX_LOGE, "%s: argument read error.\n", __func__);        \
-            unload_user_data(dest);                                           \
+            unload_user_data(dest, false);                                           \
             ret = -EFAULT;                                                    \
             break;                                                            \
         }
 
-#define unload_user_data(dest)         \
-        if ((dest) != NULL)            \
+#define unload_user_data(dest, overwrite)                                     \
+        if ((overwrite) && copy_to_user(from, (dest), size)) {                \
+            hax_log(HAX_LOGE, "%s: failed to write data back.\n", __func__);  \
+            ret = -EFAULT;                                                    \
+        }                                                                     \
+        if ((dest) != NULL)                                                   \
             hax_vfree((dest), size);
 
 typedef struct hax_vm_linux_t {
@@ -484,7 +487,15 @@ static long hax_vcpu_ioctl(struct file *filp, unsigned int cmd,
         load_user_data(cpuid, argp, total, HAX_MAX_CPUID_ENTRIES, hax_cpuid,
                        hax_cpuid_entry);
         ret = vcpu_set_cpuid(cvcpu, cpuid);
-        unload_user_data(cpuid);
+        unload_user_data(cpuid, false);
+        break;
+    }
+    case HAX_VCPU_IOCTL_GET_CPUID: {
+        struct hax_cpuid *cpuid;
+        load_user_data(cpuid, argp, total, HAX_MAX_CPUID_ENTRIES, hax_cpuid,
+                       hax_cpuid_entry);
+        ret = vcpu_get_cpuid(cvcpu, cpuid);
+        unload_user_data(cpuid, true);
         break;
     }
     default:

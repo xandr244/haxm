@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009 Intel Corporation
+ * Copyright (c) 2011 Intel Corporation
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -28,39 +28,21 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HAX_CORE_HAX_DRIVER_H_
-#define HAX_CORE_HAX_DRIVER_H_
+#ifndef HAX_DARWIN_HAX_ENTRY_H_
+#define HAX_DARWIN_HAX_ENTRY_H_
 
-#include "vm.h"
-#include "pmu.h"
-#define CONFIG_VM_NUM 16
+#include "hax_mem_alloc.h"
 
-struct hax_t {
-    int vmx_enable_flag;
-    int nx_enable_flag;
-    int em64t_enable_flag;
-    int ug_enable_flag;
+__private_extern__
+int com_intel_hax_init_ui(void);
 
-    /*
-     * Common architectural performance monitoring (APM) parameters (version ID,
-     * etc.) supported by all logical processors of the host CPU
-     */
-    uint apm_version;
-    uint apm_general_count;
-    uint64_t apm_general_mask;
-    uint apm_event_count;
-    uint32_t apm_event_unavailability;
-    uint apm_fixed_count;
-    uint64_t apm_fixed_mask;
-    // Unparsed CPUID leaf 0xa output for CPUID virtualization
-    struct cpu_pmu_info apm_cpuid_0xa;
+__private_extern__
+int com_intel_hax_exit_ui(void);
 
-    hax_list_head hax_vmlist;
-    hax_mutex hax_lock;
-    uint64_t mem_limit;
-    uint64_t mem_quota;
-};
+int hax_vcpu_destroy_ui(struct hax_vcpu_mac *vcpu);
+int hax_vcpu_create_ui(struct hax_vcpu_mac *vcpu);
 
-uint64_t hax_get_memory_threshold(void);
-extern struct hax_t *hax;
-#endif  // HAX_CORE_HAX_DRIVER_H_
+int hax_vm_destroy_ui(struct hax_vm_mac *vm);
+int hax_vm_create_ui(struct hax_vm_mac *vm);
+
+#endif  // HAX_DARWIN_HAX_ENTRY_H_

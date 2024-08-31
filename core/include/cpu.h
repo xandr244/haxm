@@ -31,11 +31,11 @@
 #ifndef HAX_CORE_CPU_H_
 #define HAX_CORE_CPU_H_
 
-#include "vmx.h"
-#include "segments.h"
 #include "config.h"
-#include "vm.h"
 #include "pmu.h"
+#include "segments.h"
+#include "vm.h"
+#include "vmx.h"
 
 #define VMXON_SUCCESS 0x0
 #define VMXON_FAIL    0x1
@@ -45,12 +45,6 @@ struct vcpu_t;
 struct vcpu_state_t;
 
 #define NR_HMSR 6
-// The number of MSRs to be loaded on VM exits
-// Currently the MSRs list only supports automatic loading of below MSRs, the
-// total count of which is 8.
-// * IA32_PMCx
-// * IA32_PERFEVTSELx
-#define NR_HMSR_AUTOLOAD 8
 
 struct hstate {
     /* ldt is not covered by host vmcs area */
@@ -71,7 +65,6 @@ struct hstate {
     uint64_t fs_base;
     uint64_t hcr2;
     struct vmx_msr hmsr[NR_HMSR];
-    vmx_msr_entry hmsr_autoload[NR_HMSR_AUTOLOAD];
     // IA32_PMCx, since APM v1
     uint64_t apm_pmc_msrs[APM_MAX_GENERAL_COUNT];
     // IA32_PERFEVTSELx, since APM v1
@@ -91,6 +84,8 @@ struct hstate {
     uint64_t dr7;
     // CR0
     bool cr0_ts;
+    // XCR0
+    uint64_t xcr0;
     uint64_t _pat;
 };
 

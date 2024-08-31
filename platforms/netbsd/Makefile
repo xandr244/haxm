@@ -2,6 +2,9 @@ S?=	/usr/src/sys
 
 KMOD=	haxm
 
+CFLAGS+= -Wno-error=address-of-packed-member
+CPPFLAGS+= -I../../include -I../../core/include
+
 # toplevel
 SRCS+=	components.c
 SRCS+=	hax_entry.c
@@ -30,13 +33,13 @@ SRCS+=	ia32.c
 SRCS+=	intr_exc.c
 SRCS+=	memory.c
 SRCS+=	memslot.c
+SRCS+=	mmio.c
 SRCS+=	name.c
 SRCS+=	page_walker.c
 SRCS+=	ramblock.c
 SRCS+=	vcpu.c
 SRCS+=	vm.c
 SRCS+=	vmx.c
-SRCS+=	vtlb.c
 
 .if ${MACHINE} == "amd64"
 TARGET_ELF=	elf64

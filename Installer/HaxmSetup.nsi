@@ -41,6 +41,7 @@ Unicode true
 !include 'UI.nsh'
 !include 'Utils.nsh'
 
+Var level
 Var code
 
 Section Main
@@ -58,17 +59,45 @@ Section Main
   File "assets\checktool.exe"
   ${Log} "Extract: checktool.exe... 100%"
 
+  StrCpy $level 0
+
+Check:
   Call CheckEnv
+  Pop $0
+
+  ${Switch} $0
+    ${Case} ${ENV_STATUS_UNREADY}
+      MessageBox MB_OK|MB_ICONEXCLAMATION "${DLG_WARNING}" /SD IDOK
+      ${Log} "${DLG_WARNING}"
+      StrCpy $level ${EXIT_FLAG_WARNING}
+      ${Break}
+    ${Case} ${ENV_STATUS_INUSE}
+      MessageBox MB_RETRYCANCEL|MB_ICONSTOP "${DLG_GUEST_ERROR}" /SD IDCANCEL \
+          IDRETRY Check
+      ${Log} "${DLG_GUEST_ERROR}"
+      ${Exit} ${EXIT_MODE_NORMAL} ${EXIT_FLAG_ERROR}
+      ${Break}
+    ${Case} ${ENV_STATUS_UNSUPPORTED}
+      MessageBox MB_OK|MB_ICONSTOP "${DLG_SYS_ERROR}" /SD IDOK
+      ${Log} "${DLG_SYS_ERROR}"
+      Call Restore
+      ${Exit} ${EXIT_MODE_NORMAL} ${EXIT_FLAG_ERROR}
+      ${Break}
+    ${Default}
+      ${Break}
+  ${EndSwitch}
+
   Call UninstallMsiVersion
   Call InstallDriver
 
   ; WriteUninstaller is not used directly because a signed binary is needed
   File "assets\uninstall.exe"
   ${Log} "Create uninstaller: $INSTDIR\uninstall.exe"
-SectionEnd
 
-Section -Post
-  Call onInstalled
+  Call LoadDriver
+
+  IntOp $code $level | $code
+  ${Exit} ${EXIT_MODE_NORMAL} $code
 SectionEnd
 
 Function .onInit
@@ -93,33 +122,42 @@ Function CheckVersion
 
   ClearErrors
   EnumRegKey $0 ${REG_ROOT_KEY} ${REG_KEY_PRODUCT} 0
-  IfErrors not_installed installed
-  not_installed:
-    StrCpy $code 0
-    ${Log} "Version: ${PRODUCT_VERSION}"
+  IfErrors NotInstalled Installed
+NotInstalled:
+  StrCpy $code 0
+  ${Log} "Version: ${PRODUCT_VERSION}"
+  Return
+Installed:
+  ReadRegStr $0 ${REG_ROOT_KEY} ${REG_KEY_PRODUCT} "DisplayVersion"
+  ${VersionCompare} $0 ${PRODUCT_VERSION} $R0
+  ${Switch} $R0
+    ${Case} 0
+      MessageBox MB_YESNO|MB_ICONQUESTION "${DLG_REINSTALL}" /SD IDYES IDYES \
+          Reinstall
+      ${Exit} ${EXIT_MODE_QUIT} 0
+Reinstall:
+      StrCpy $code ${EXIT_FLAG_REINSTALL}
+      ${Log} "${LOG_REINSTALL}: $0"
+      ${Break}
+    ${Case} 1
+      MessageBox MB_OK|MB_ICONEXCLAMATION "${DLG_DOWNGRADE}" /SD IDOK
+      ${Log} "${LOG_UNINSTALL}: $0"
+      ${Exit} ${EXIT_MODE_QUIT} ${EXIT_FLAG_ERROR}
+      ${Break}
+    ${Default}
+      StrCpy $code ${EXIT_FLAG_UPGRADE}
+      ${Log} "${LOG_UPGRADE}: $0 => ${PRODUCT_VERSION}"
+      ${Break}
+  ${EndSwitch}
+FunctionEnd
+
+Function Restore
+  ${If} $code != 0
     Return
-  installed:
-    ReadRegStr $0 ${REG_ROOT_KEY} ${REG_KEY_PRODUCT} "DisplayVersion"
-    ${VersionCompare} $0 ${PRODUCT_VERSION} $R0
-    ${Switch} $R0
-      ${Case} 0
-        MessageBox MB_YESNO|MB_ICONQUESTION "${DLG_REINSTALL}" /SD IDYES IDYES \
-            reinstall
-        ${Exit} 1 0
-  reinstall:
-        StrCpy $code 1
-        ${Log} "${LOG_REINSTALL}: $0"
-        ${Break}
-      ${Case} 1
-        MessageBox MB_OK|MB_ICONEXCLAMATION "${DLG_DOWNGRADE}" /SD IDOK
-        ${Log} "${LOG_UNINSTALL}: $0"
-        ${Exit} 1 3
-        ${Break}
-      ${Default}
-        StrCpy $code 2
-        ${Log} "${LOG_UPGRADE}: $0 => ${PRODUCT_VERSION}"
-        ${Break}
-    ${EndSwitch}
+  ${EndIf}
+
+  RMDir /r "$INSTDIR"
+  ${Log} "Delete folder: $INSTDIR"
 FunctionEnd
 
 Function UninstallMsiVersion
@@ -174,17 +212,37 @@ Function InstallDriver
   ${Log} "Copy to ${DRIVER_DIR}\${DRIVER_FILE}"
 FunctionEnd
 
-Function onInstalled
+Function LoadDriver
   ${If} $code == 0
     Call CreateService
   ${EndIf}
 
   Call StartService
   Call CreateRegItems
+FunctionEnd
 
-  ${Exit} 0 $code
+Function onFinished
+  IntOp $0 $status & ${ENV_FLAGS_SYS_SUPPORTED}
+  ${If} $0 != 0
+    Call LoadSystemErrorPage
+    Return
+  ${EndIf}
+
+  IntOp $0 $status & ${ENV_FLAGS_GUEST_READY}
+  ${If} $0 != 0
+    Call LoadGuestErrorPage
+    Return
+  ${EndIf}
+
+  IntOp $0 $status & ${ENV_FLAGS_HOST_READY}
+  ${If} $0 != 0
+    Call LoadHostErrorPage
+    Return
+  ${EndIf}
+
+  Call LoadSuccessPage
 FunctionEnd
 
 Function onAbort
-  ${Exit} 0 0
+  ${Exit} ${EXIT_MODE_NORMAL} 0
 FunctionEnd

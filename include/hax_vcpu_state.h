@@ -190,6 +190,8 @@ struct vcpu_state_t {
     interruptibility_state_t _interruptibility_state;
 } PACKED;
 
+typedef struct vcpu_state_t vcpu_state_t;
+
 void dump(void);
 
 #endif  // HAX_VCPU_STATE_H_

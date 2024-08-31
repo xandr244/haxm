@@ -32,6 +32,13 @@
 #ifndef HAX_CORE_TYPES_H_
 #define HAX_CORE_TYPES_H_
 
-#include "../../include/hax_types.h"
+#include "hax_types.h"
+
+#ifndef min
+#define min(a,b)  (((a)<(b))?(a):(b))
+#endif
+#ifndef max
+#define max(a,b)  (((a)>(b))?(a):(b))
+#endif
 
 #endif  // HAX_CORE_TYPES_H_

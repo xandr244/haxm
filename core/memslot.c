@@ -28,21 +28,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../include/hax.h"
-#include "include/memory.h"
-#include "include/paging.h"
+#include "memory.h"
+
+#include "hax.h"
+
+#include "paging.h"
 
 #define MEMSLOT_PROCESSING 0x01
 #define MEMSLOT_TO_INSERT  0x02
 
 #define SAFE_CALL(f) if ((f) != NULL) (f)
-
-#ifndef min
-#define min(a, b) (((a) < (b)) ? (a) : (b)) 
-#endif
-#ifndef max
-#define max(a, b) (((a) > (b)) ? (a) : (b)) 
-#endif
 
 enum callback {
     MAPPING_ADDED = 1,

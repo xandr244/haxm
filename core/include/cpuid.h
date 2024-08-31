@@ -31,13 +31,16 @@
 #ifndef HAX_CORE_CPUID_H_
 #define HAX_CORE_CPUID_H_
 
-#include "../../include/hax.h"
-#include "../../include/hax_types.h"
+#include "hax.h"
+
+#include "types.h"
 
 #define CPUID_REG_EAX 0
 #define CPUID_REG_ECX 1
 #define CPUID_REG_EDX 2
 #define CPUID_REG_EBX 3
+
+struct vm_t;
 
 typedef union cpuid_args_t {
     struct {
@@ -202,6 +205,7 @@ enum {
     X86_FEATURE_AVX2          = FEAT(5),  /* 0x00000020  Advanced Vector Extensions 2 */
     X86_FEATURE_SMEP          = FEAT(7),  /* 0x00000080  Supervisor-Mode Execution Prevention */
     X86_FEATURE_BMI2          = FEAT(8),  /* 0x00000100  Bit Manipulation Instruction Set 2 */
+    X86_FEATURE_ERMS          = FEAT(9),  /* 0x00000200  Enhanced REP MOVSB/STOSB */
     X86_FEATURE_INVPCID       = FEAT(10), /* 0x00000400  INVPCID instruction */
     X86_FEATURE_RTM           = FEAT(11), /* 0x00000800  Transactional Synchronization Extensions */
     X86_FEATURE_RDT_M         = FEAT(12), /* 0x00001000  Resource Director Technology Monitoring */
@@ -225,11 +229,24 @@ enum {
 
     /*
      * Intel SDM Vol. 2A: Table 3-8. Information Returned by CPUID Instruction
+     * Processor Extended State Enumeration Sub-leaf
+     * Features for CPUID with EAX=0dh, ECX=01h stored in EAX
+     */
+#define FEAT(bit) \
+    FEATURE_KEY_SUBLEAF(4, 0x0d, 0x01, CPUID_REG_EAX, bit)
+    X86_FEATURE_XSAVEOPT      = FEAT(0),  /* 0x00000001  XSAVEOPT instruction */
+    X86_FEATURE_XSAVEC        = FEAT(1),  /* 0x00000002  XSAVEC instruction */
+    X86_FEATURE_XGETBV1       = FEAT(2),  /* 0x00000004  XGETBV with ECX = 1 instruction */
+    X86_FEATURE_XSAVES        = FEAT(3),  /* 0x00000008  XSAVES/XRSTORS instructions */
+#undef FEAT
+
+    /*
+     * Intel SDM Vol. 2A: Table 3-8. Information Returned by CPUID Instruction
      * Extended Function CPUID Information
      * Features for CPUID with EAX=80000001h stored in ECX
      */
 #define FEAT(bit) \
-    FEATURE_KEY_LEAF(4, 0x80000001, CPUID_REG_ECX, bit)
+    FEATURE_KEY_LEAF(5, 0x80000001, CPUID_REG_ECX, bit)
     X86_FEATURE_LAHF          = FEAT(0),  /* 0x00000001  LAHF/SAHF Instructions */
     X86_FEATURE_PREFETCHW     = FEAT(8),  /* 0x00000100  PREFETCH/PREFETCHW instructions */
 #undef FEAT
@@ -240,7 +257,7 @@ enum {
      * Features for CPUID with EAX=80000001h stored in EDX
      */
 #define FEAT(bit) \
-    FEATURE_KEY_LEAF(5, 0x80000001, CPUID_REG_EDX, bit)
+    FEATURE_KEY_LEAF(6, 0x80000001, CPUID_REG_EDX, bit)
     X86_FEATURE_SYSCALL       = FEAT(11), /* 0x00000800  SYSCALL/SYSRET Instructions */
     X86_FEATURE_NX            = FEAT(20), /* 0x00100000  No-Execute Bit */
     X86_FEATURE_PDPE1GB       = FEAT(26), /* 0x04000000  Gibibyte pages */
@@ -260,10 +277,13 @@ bool cpuid_host_has_feature_uncached(uint32_t feature_key);
 void cpuid_init_supported_features(void);
 uint32_t cpuid_guest_get_size(void);
 void cpuid_guest_init(hax_cpuid_t *cpuid);
+bool cpuid_guest_has_feature(hax_cpuid_t *cpuid, uint32_t feature_key);
 void cpuid_execute(hax_cpuid_t *cpuid, cpuid_args_t *args);
+void cpuid_update(hax_cpuid_t *cpuid, struct vcpu_t *vcpu);
 void cpuid_get_features_mask(hax_cpuid_t *cpuid, uint64_t *features_mask);
 void cpuid_set_features_mask(hax_cpuid_t *cpuid, uint64_t features_mask);
-void cpuid_get_guest_features(hax_cpuid_t *cpuid, hax_cpuid_entry *features);
-void cpuid_set_guest_features(hax_cpuid_t *cpuid, hax_cpuid *cpuid_info);
+int cpuid_get_guest_features(hax_cpuid_t *cpuid, hax_cpuid *cpuid_info);
+int cpuid_set_guest_features(hax_cpuid_t *cpuid, hax_cpuid *cpuid_info);
+void cpuid_post_set_features(hax_cpuid_t *cpuid, struct vm_t *vm);
 
 #endif /* HAX_CORE_CPUID_H_ */

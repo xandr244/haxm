@@ -30,9 +30,9 @@
 
 // The entry code for HAX kernel driver
 
-//#include <ntddk.h>
 #include <ntifs.h>
 #include <string.h>
+#include <wdmsec.h>
 
 #include "hax_win.h"
 
@@ -42,6 +42,13 @@ void vcpu_debug(struct vcpu_t *vcpu, struct hax_debug_t *debug);
 
 #define NT_DEVICE_NAME L"\\Device\\HAX"
 #define DOS_DEVICE_NAME L"\\DosDevices\\HAX"
+// SDDL string for HAX device object
+// [Access]              [SID]
+// All                   System
+// All                   Administrators
+// Read/Write/Execute    Authenticated Users
+#define SDDL_DEVOBJ_SYS_ALL_ADM_ALL_AU_RWX \
+        L"D:P(A;;GA;;;SY)(A;;GA;;;BA)(A;;GRGWGX;;;AU)"
 
 DRIVER_INITIALIZE DriverEntry;
 __drv_dispatchType(IRP_MJ_CREATE)
@@ -96,20 +103,25 @@ NTSTATUS DriverEntry(__in PDRIVER_OBJECT DriverObject,
     int ret;
     UNICODE_STRING  ntUnicodeString;    // NT Device Name "\Device\HAXDEV"
     UNICODE_STRING  ntWin32NameString;
+    UNICODE_STRING  sddlString;
     PDEVICE_OBJECT pDevObj;
     struct hax_dev_ext *DevExt = NULL;
     UNREFERENCED_PARAMETER(RegistryPath);
     RtlInitUnicodeString( &ntUnicodeString, NT_DEVICE_NAME );
     RtlInitUnicodeString( &ntWin32NameString, DOS_DEVICE_NAME );
-    ntStatus = IoCreateDevice(DriverObject,   // Our Driver Object
-                              sizeof(struct hax_dev_ext),
-                              // Device name "\Device\SIOCTL"
-                              &ntUnicodeString,
-                              FILE_DEVICE_UNKNOWN,  // Device type
-                              // Device characteristics
-                              FILE_DEVICE_SECURE_OPEN,
-                              FALSE,  // Not an exclusive device
-                              &pDevObj);  // Returned ptr to Device Object
+    RtlInitUnicodeString( &sddlString, SDDL_DEVOBJ_SYS_ALL_ADM_ALL_AU_RWX );
+
+    ntStatus = IoCreateDeviceSecure(
+            DriverObject,                // HAX driver object
+            sizeof(struct hax_dev_ext),  // Device extension size
+            &ntUnicodeString,            // Device name "\Device\HAX"
+            FILE_DEVICE_UNKNOWN,         // Device type
+            FILE_DEVICE_SECURE_OPEN,     // Device characteristics
+            FALSE,                       // Not an exclusive device
+            &sddlString,                 // SDDL string specifying access
+            NULL,                        // Device class GUID
+            &pDevObj);                   // Returned device object pointer
+
     if (!NT_SUCCESS(ntStatus)) {
         hax_log(HAX_LOGE, "Couldn't create the device object\n");
         write_event(HaxDriverCreateUpDevFailure, DriverObject, NULL, 0);
@@ -258,7 +270,7 @@ NTSTATUS HaxVcpuControl(PDEVICE_OBJECT DeviceObject,
     PCHAR               inBuf, outBuf; // pointer to Input and output buffer
     uint32_t vcpu_id, vm_id;
     struct vcpu_t *cvcpu;
-    int infret = 0;
+    int infret = 0, err;
     struct hax_vcpu_windows *vcpu = ext;
     PIO_STACK_LOCATION  irpSp;// Pointer to current stack location
 
@@ -442,6 +454,26 @@ NTSTATUS HaxVcpuControl(PDEVICE_OBJECT DeviceObject,
             if (vcpu_set_cpuid(cvcpu, cpuid)) {
                 ret = STATUS_UNSUCCESSFUL;
             }
+            break;
+        }
+        case HAX_VCPU_IOCTL_GET_CPUID: {
+            hax_cpuid *cpuid = (hax_cpuid *)outBuf;
+            if (outBufLength < sizeof(hax_cpuid) || outBufLength <
+                    sizeof(hax_cpuid) + cpuid->total *
+                    sizeof(hax_cpuid_entry)) {
+                ret = STATUS_INVALID_PARAMETER;
+                goto done;
+            }
+            err = vcpu_get_cpuid(cvcpu, cpuid);
+            if (err == -EINVAL) {
+                ret = STATUS_UNSUCCESSFUL;
+                break;
+            }
+            if (err == -ENOMEM) {
+                infret = sizeof(hax_cpuid);
+                break;
+            }
+            infret = sizeof(hax_cpuid) + cpuid->total * sizeof(hax_cpuid_entry);
             break;
         }
         default:

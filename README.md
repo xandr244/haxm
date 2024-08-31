@@ -1,3 +1,23 @@
+# DISCONTINUATION OF PROJECT
+
+This project will no longer be maintained by Intel.
+
+Intel has ceased development and contributions including, but not limited to, maintenance, bug fixes, new releases, or updates, to this project.
+
+Intel no longer accepts patches to this project.
+
+If you have an ongoing need to use this project, are interested in independently developing it, or would like to maintain patches for the open source software community, please create your own fork of this project.
+
+Contact: webadmin@linux.intel.com
+
+# Status
+
+HAXM was created to bring Intel Virtualization Technology to Windows and macOS
+users. Today both Microsoft Hyper-V and macOS HVF have added support for Intel
+Virtual Machine Extensions. We have therefore decided to retire the HAXM
+project. HAXM v7.8.0 is our last release and we will not accept pull requests or
+respond to issues after this.
+
 # Intel Hardware Accelerated Execution Manager (HAXM)
 
 <img src="Installer/res/haxm_logo.ico" height="176px" align="right">

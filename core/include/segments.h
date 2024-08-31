@@ -31,13 +31,17 @@
 #ifndef HAX_CORE_SEGMENTS_H_
 #define HAX_CORE_SEGMENTS_H_
 
-#include "ia32.h"
 // TODO: Get rid of is_compatible(), and then delete the following #include
-#include "../../include/hax_interface.h"
+#include "hax_interface.h"
+
+#include "ia32.h"
 
 #ifdef HAX_COMPILER_MSVC
 #pragma pack(push, 1)
 #endif
+
+#define AR_DPL_SHIFT 5
+#define AR_DPL(ar) (((ar) >> AR_DPL_SHIFT) & 0x3)
 
 struct seg_desc_t {
     union {

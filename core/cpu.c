@@ -28,17 +28,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "../include/hax.h"
-#include "include/ia32_defs.h"
-#include "include/cpu.h"
-#include "include/cpuid.h"
-#include "include/vcpu.h"
-#include "include/debug.h"
-#include "include/dump.h"
-#include "include/name.h"
-#include "include/vtlb.h"
-#include "include/intr.h"
-#include "include/ept.h"
+#include "cpu.h"
+
+#include "hax.h"
+
+#include "cpuid.h"
+#include "driver.h"
+#include "dump.h"
+#include "fpu.h"
+#include "ia32_defs.h"
+#include "intr.h"
+#include "name.h"
+#include "vcpu.h"
 
 static void cpu_vmentry_failed(struct vcpu_t *vcpu, vmx_result_t result);
 static int cpu_vmexit_handler(struct vcpu_t *vcpu, exit_reason_t exit_reason,
@@ -69,6 +70,7 @@ void cpu_init_vmx(void *arg)
 {
     struct info_t vmx_info;
     struct per_cpu_data *cpu_data;
+    struct hstate *hstate;
     uint32_t fc_msr;
     vmcs_t *vmxon;
     int nx_enable = 0, vt_enable = 0;
@@ -144,6 +146,16 @@ void cpu_init_vmx(void *arg)
     vmx_read_info(&cpu_data->vmx_info);
 
     cpu_data->cpu_features |= HAX_CPUF_INITIALIZED;
+
+    if (cpu_has_feature(X86_FEATURE_XSAVE)) {
+        hstate = &cpu_data->hstate;
+
+        hstate->xcr0 = ia32_xgetbv(XCR_XFEATURE_ENABLED_MASK);
+        hax->supported_xcr0 = hstate->xcr0 & HAX_SUPPORTED_XCR0;
+
+        hax_log(HAX_LOGI, "%s: host xcr0 = 0x%llx, HAXM supported xcr0 = 0x%llx"
+                "\n", __func__, hstate->xcr0, hax->supported_xcr0);
+    }
 }
 
 void cpu_exit_vmx(void *arg)
@@ -327,12 +339,7 @@ void vcpu_handle_vmcs_pending(struct vcpu_t *vcpu)
         vcpu->vmcs_pending_entry_intr_info = 0;
     }
 
-    if (vcpu->vmcs_pending_guest_cr3) {
-        vmwrite(vcpu, GUEST_CR3, vtlb_get_cr3(vcpu));
-        vcpu->vmcs_pending_guest_cr3 = 0;
-    }
     vcpu->vmcs_pending = 0;
-    return;
 }
 
 /* Return the value same as ioctl value */
@@ -633,7 +640,7 @@ void load_vmcs_common(struct vcpu_t *vcpu)
         vmwrite(vcpu, VMX_TSC_OFFSET, vcpu->tsc_offset);
 
     vmwrite(vcpu, GUEST_ACTIVITY_STATE, vcpu->state->_activity_state);
-    vcpu_vmwrite_all(vcpu, 0);
+    vcpu_vmwrite_all(vcpu);
 }
 
 

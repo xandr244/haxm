@@ -31,7 +31,7 @@
 #ifndef HAX_CORE_IA32_H_
 #define HAX_CORE_IA32_H_
 
-#include "../../include/hax_types.h"
+#include "types.h"
 
 union cpuid_args_t;
 struct system_desc_t;
@@ -83,6 +83,8 @@ uint32_t ASMCALL asm_fls(uint32_t bit32);
 
 uint64_t ia32_rdmsr(uint32_t reg);
 void ia32_wrmsr(uint32_t reg, uint64_t val);
+uint64_t ia32_xgetbv(uint32_t reg);
+void ia32_xsetbv(uint32_t reg, uint64_t val);
 
 uint64_t ia32_rdtsc(void);
 
